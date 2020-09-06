@@ -1,7 +1,7 @@
 # annotateRegions
 
 ### Dependencies
-[BEDtools](https://bedtools.readthedocs.io/en/latest/) installed and accessible in PATH variable
+[BEDtools](https://bedtools.readthedocs.io/en/latest/) installed and accessible in PATH variable   
 R
 
 ### extract_beds
@@ -14,6 +14,9 @@ The script 'extract_beds.sh' creates the following gene feature bed files from t
 6. 5'UTR bed file
 7. 3'UTR bed file
 
-This script utilizes BEDtools
+This script utilizes [BEDtools](https://bedtools.readthedocs.io/en/latest/)
 
-Inputs: gtf file, chr_lens.txt file, size of promoters in bp (upstream from TSS)
+Inputs:
+- gtf file
+- chr_lens.txt file
+- size of promoters in bp (upstream from TSS)
