@@ -1,9 +1,5 @@
 #!/bin/bash
 
-# TODO: clean up intro bed filee output
-#          - need GeneID of intron
-#          - strand? not necessary for stran symmetrical cpg methylation, but for future uses
-
 # From a gtf file, obtain 7 bed files for various gene features:
 #   1. a gene bed file (6col bed file of gene regions)
 #   2. a gene-level promoter bed file
