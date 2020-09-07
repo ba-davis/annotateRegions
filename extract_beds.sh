@@ -88,9 +88,20 @@ bedtools complement -i my_gtf.sorted.gtf -g chr_lens_sorted.txt > intergenic_sor
 # thus, everything that is not intergenic or exon must be intron
 cut -f1,2,3 $exon_bed > exon.bed # select first 3 columns from exon bed file
 bedtools complement -i <(cat exon.bed intergenic_sorted.bed | sort -k1,1 -k2,2n) -g chr_lens_sorted.txt > $intron_bed
+# We need to add columns 4,5,6 to intron bed. Get this info from the 6-col exon bed file
+# add a key (chr_start) as first column to intron.bed file (3 col)
+awk 'BEGIN{FS=OFS="\t"} {print $1"_"$2, $0}' $intron_bed > new_intron.bed
+# add a key (chr_end) as first column to exon.bed file (6 col)
+awk 'BEGIN{FS=OFS="\t"} {print $1"_"$3, $0}' $exon_bed > new_exon.bed
+# match and create final 6-col intron bed file
+awk 'BEGIN{FS=OFS="\t"} NR==FNR {a[$1]=$5;b[$1]=$6;c[$1]=$7;next}{print $0 "\t" a[$1] "\t" b[$1] "\t" c[$1]}' new_exon.bed new_intron.bed | cut -f2- > $intron_bed
+
+# remove tmp files
 rm intergenic_sorted.bed
 rm exon.bed
-# get introns..currently performed via genomation
+rm new_intron.bed
+rm new_exon.bed
+
 
 #--------------------#
 # GET 5'UTR BED FILE #
