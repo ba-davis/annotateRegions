@@ -72,9 +72,12 @@ awk -v s_style=$style 'BEGIN{FS=OFS="\t"} $3==s_style {print}' $my_gtf | awk '{g
 # sort the gene bed file with bedtools sort
 bedtools sort -i $tmp_bed > $tmp_bed2
 rm $tmp_bed
-# subtract 1 from start col (2nd field)
-awk '{print $1 "\t" ($2 - 1) "\t" $3 "\t" $4 "\t" $5 "\t" $6}' $tmp_bed2 > $exon_bed
+# remove any duplicate lines, keeping one unique entry per duplicate
+awk '!a[$0]++' $tmp_bed2 > $tmp_bed
 rm $tmp_bed2
+# subtract 1 from start col (2nd field)
+awk '{print $1 "\t" ($2 - 1) "\t" $3 "\t" $4 "\t" $5 "\t" $6}' $tmp_bed > $exon_bed
+rm $tmp_bed
 
 #---------------------#
 # GET INTRON BED FILE #
