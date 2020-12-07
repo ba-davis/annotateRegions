@@ -20,3 +20,10 @@ Inputs:
 - gtf file
 - chr_lens.txt file
 - size of promoters in bp (upstream from TSS)
+
+
+TODO:
+add sanity checks at the beginning to check if the features exist in the input gtf file
+if the feature isn't found, output a warning and do not attempt to create that feature bed file
+
+extract first intron bed file
