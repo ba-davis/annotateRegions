@@ -1,13 +1,14 @@
 #!/bin/bash
 
-# From a gtf file, obtain 7 bed files for various gene features:
+# From a gtf file, obtain several bed files for various gene features:
 #   1. a gene bed file (6col bed file of gene regions)
 #   2. a gene-level promoter bed file
 #   3. a gene-level TSS bed file
 #   4. an exon bed file
-#   5. an intron bed file
-#   6. a 5'UTR bed file
-#   7. a 3'UTR bed file
+#   5. a gene-level first exon bed file
+#   6. an intron bed file
+#   7. a 5'UTR bed file
+#   8. a 3'UTR bed file
 
 #--------------------------------------------------------------------------------------------------------------------#
 
