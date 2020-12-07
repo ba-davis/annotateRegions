@@ -7,8 +7,9 @@
 #   4. an exon bed file
 #   5. a gene-level first exon bed file
 #   6. an intron bed file
-#   7. a 5'UTR bed file
-#   8. a 3'UTR bed file
+#   7. a gene-level first intron bed file
+#   8. a 5'UTR bed file
+#   9. a 3'UTR bed file
 
 #--------------------------------------------------------------------------------------------------------------------#
 
@@ -26,6 +27,7 @@ prom_bed=$name.promoters.$prom_size.bed  # set name of promoter bed file
 exon_bed=$name.exon.bed                  # set name of exon bed file
 first_exon_bed=$name.first_exon.bed      # set name of first exon bed file
 intron_bed=$name.intron.bed              # set name of intron bed file
+first_intron_bed=$name.first_intron.bed  # set name of first intron bed file
 fiveprime_bed=$name.fiveprimeutr.bed     # set name of 5' UTR bed file
 threeprime_bed=$name.threeprimeutr.bed   # set name of 3' UTR bed file
 tss_bed=$name.tss.bed                    # set name of TSS bed file
@@ -121,13 +123,32 @@ awk 'BEGIN{FS=OFS="\t"} {print $1"_"$2, $0}' $intron_bed > new_intron.bed
 awk 'BEGIN{FS=OFS="\t"} {print $1"_"$3, $0}' $exon_bed > new_exon.bed
 # match and create final 6-col intron bed file
 awk 'BEGIN{FS=OFS="\t"} NR==FNR {a[$1]=$5;b[$1]=$6;c[$1]=$7;next}{print $0 "\t" a[$1] "\t" b[$1] "\t" c[$1]}' new_exon.bed new_intron.bed | cut -f2- > $intron_bed
-
 # remove tmp files
 rm intergenic_sorted.bed
 rm exon.bed
 rm new_intron.bed
 rm new_exon.bed
 
+#---------------------------#
+# GET FIRST INTRON BED FILE #
+#---------------------------#
+# first, separate the intron bed file into 2 files based on strand
+awk '$6 == "+" { print $1"\t"$2"\t"$3"\t"$4"\t"$5"\t"$6}' $intron_bed > $name.plus.bed
+awk '$6 == "-" { print $1"\t"$2"\t"$3"\t"$4"\t"$5"\t"$6}' $intron_bed > $name.minus.bed
+# for the introns on the plus strand, we want to keep the first intron entry per gene
+awk '!a[$4]++' $name.plus.bed > $name.plus2.bed
+# for the introns on the minus strand, we want to keep the last intron entry per gene
+tac $name.minus.bed | awk '!a[$4]++' | tac > $name.minus2.bed
+# combine the first introns from both strands into one file
+cat $name.plus2.bed $name.minus2.bed > $name.first_introns.bed
+# sort it with bedtools
+bedtools sort -i $name.first_introns.bed > $first_intron_bed
+# remove tmp files
+rm $name.plus.bed
+rm $name.minus.bed
+rm $name.plus2.bed
+rm $name.minus2.bed
+rm $name.first_introns.bed
 
 #--------------------#
 # GET 5'UTR BED FILE #
