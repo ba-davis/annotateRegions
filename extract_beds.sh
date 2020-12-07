@@ -23,6 +23,7 @@ tmp_bed2=tmp2.bed                        # tmp file
 gene_bed=$name.genes.bed                 # set name of gene bed file
 prom_bed=$name.promoters.$prom_size.bed  # set name of promoter bed file
 exon_bed=$name.exon.bed                  # set name of exon bed file
+first_exon_bed=$name.first_exon.bed      # set name of first exon bed file
 intron_bed=$name.intron.bed              # set name of intron bed file
 fiveprime_bed=$name.fiveprimeutr.bed     # set name of 5' UTR bed file
 threeprime_bed=$name.threeprimeutr.bed   # set name of 3' UTR bed file
@@ -78,6 +79,27 @@ rm $tmp_bed2
 # subtract 1 from start col (2nd field)
 awk '{print $1 "\t" ($2 - 1) "\t" $3 "\t" $4 "\t" $5 "\t" $6}' $tmp_bed > $exon_bed
 rm $tmp_bed
+
+#-------------------------#
+# GET FIRST EXON BED FILE #
+#-------------------------#
+# first, separate the exon bed file into 2 files based on strand
+awk '$6 == "+" { print $1"\t"$2"\t"$3"\t"$4"\t"$5"\t"$6}' $exon_bed > $name.plus.bed
+awk '$6 == "-" { print $1"\t"$2"\t"$3"\t"$4"\t"$5"\t"$6}' $exon_bed > $name.minus.bed
+# for the exons on the plus strand, we want to keep the first exon entry per gene
+awk '!a[$4]++' $name.plus.bed > $name.plus2.bed
+# for the exons on the minus strand, we want to keep the last exon entry per gene
+tac $name.minus.bed | awk '!a[$4]++' | tac > $name.minus2.bed
+# combine the first exons from both strands into one file
+cat $name.plus2.bed $name.minus2.bed > $name.first_exons.bed
+# sort it with bedtools
+bedtools sort -i $name.first_exons.bed > $first_exon_bed
+# remove tmp files
+rm $name.plus.bed
+rm $name.minus.bed
+rm $name.plus2.bed
+rm $name.minus2.bed
+rm $name.first_exons.bed
 
 #---------------------#
 # GET INTRON BED FILE #
