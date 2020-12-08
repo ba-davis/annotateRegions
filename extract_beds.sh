@@ -39,6 +39,27 @@ cat $my_gtf | awk '$1 ~ /^#/ {print $0;next} {print $0 | "sort -k1,1 -k4,4n -k5,
 # sort the chr_lens.txt file
 cat $chr_lens | sort -k1,1 -k2,2n > chr_lens_sorted.txt
 
+#--------------------#
+# CHECK GTF FEATURES #
+#--------------------#
+# check to see if the above features exist in the provided input gtf file
+cut -f3 $my_gtf | sort | uniq > $name.key
+
+if grep -Fiq "five_prime_utr" $name.key
+then
+    has_five_prime_utr=true
+else
+    has_five_prime_utr=false
+fi
+
+if grep -Fiq "three_prime_utr" $name.key
+then
+    has_three_prime_utr=true
+else
+    has_three_prime_utr=false
+fi
+rm $name.key
+
 #-------------------#
 # GET GENE BED FILE #
 #-------------------#
@@ -50,7 +71,7 @@ rm $tmp_bed
 # subtract 1 from start col (2nd field)
 awk '{print $1 "\t" ($2 - 1) "\t" $3 "\t" $4 "\t" $5 "\t" $6}' $tmp_bed2 > $gene_bed
 rm $tmp_bed2
-
+echo "Created bed file for genes."
 
 #----------------------------------------------#
 # GET PROMOTER BED FILE from the gene bed file #
@@ -59,6 +80,7 @@ bedtools flank -i $gene_bed -g $chr_lens -l $prom_size -r 0 -s > $tmp_bed
 # bedtools sort
 bedtools sort -i $tmp_bed > $prom_bed
 rm $tmp_bed
+echo "Created bed file for promoters $prom_size bp upstream from TSS."
 
 #------------------#
 # GET TSS BED FILE #
@@ -66,6 +88,7 @@ rm $tmp_bed
 bedtools flank -i $gene_bed -g $chr_lens -l 1 -r 0 -s | awk 'BEGIN{FS=OFS="\t"} ($6=="+"){$2=$2+1} ($6=="+"){$3=$3+1} ($6=="-"){$2=$2-1} ($6=="-"){$3=$3-1} {print $0}' > $tmp_bed
 # bedtools sort
 bedtools sort -i $tmp_bed > $tss_bed
+echo "Created bed file for Transcription Start Sites."
 
 #-------------------#
 # GET EXON BED FILE #
@@ -82,6 +105,7 @@ rm $tmp_bed2
 # subtract 1 from start col (2nd field)
 awk '{print $1 "\t" ($2 - 1) "\t" $3 "\t" $4 "\t" $5 "\t" $6}' $tmp_bed > $exon_bed
 rm $tmp_bed
+echo "Created bed file for exons."
 
 #-------------------------#
 # GET FIRST EXON BED FILE #
@@ -103,6 +127,7 @@ rm $name.minus.bed
 rm $name.plus2.bed
 rm $name.minus2.bed
 rm $name.first_exons.bed
+echo "Created bed file for first exons."
 
 #---------------------#
 # GET INTRON BED FILE #
@@ -128,6 +153,7 @@ rm intergenic_sorted.bed
 rm exon.bed
 rm new_intron.bed
 rm new_exon.bed
+echo "Created bed file for introns."
 
 #---------------------------#
 # GET FIRST INTRON BED FILE #
@@ -149,32 +175,45 @@ rm $name.minus.bed
 rm $name.plus2.bed
 rm $name.minus2.bed
 rm $name.first_introns.bed
+echo "Created bed file for first introns."
 
 #--------------------#
 # GET 5'UTR BED FILE #
 #--------------------#
-style="five_prime_utr"
-# print only lines where 3rd field in the defined style
-awk -v s_style=$style 'BEGIN{FS=OFS="\t"} $3==s_style {print}' $my_gtf | awk '{gsub(/\"|\;/,"",$10)}1' | awk '{print $1 "\t" $4 "\t" $5 "\t" $10 "\t" $6 "\t" $7}' > $tmp_bed
-# sort the gene bed file with bedtools sort
-bedtools sort -i $tmp_bed > $tmp_bed2
-rm $tmp_bed
-# subtract 1 from start col (2nd field)
-awk '{print $1 "\t" ($2 - 1) "\t" $3 "\t" $4 "\t" $5 "\t" $6}' $tmp_bed2 > $fiveprime_bed
-rm $tmp_bed2
+if $has_five_prime_utr
+then
+  style="five_prime_utr"
+  # print only lines where 3rd field in the defined style
+  awk -v s_style=$style 'BEGIN{FS=OFS="\t"} $3==s_style {print}' $my_gtf | awk '{gsub(/\"|\;/,"",$10)}1' | awk '{print $1 "\t" $4 "\t" $5 "\t" $10 "\t" $6 "\t" $7}' > $tmp_bed
+  # sort the gene bed file with bedtools sort
+  bedtools sort -i $tmp_bed > $tmp_bed2
+  rm $tmp_bed
+  # subtract 1 from start col (2nd field)
+  awk '{print $1 "\t" ($2 - 1) "\t" $3 "\t" $4 "\t" $5 "\t" $6}' $tmp_bed2 > $fiveprime_bed
+  rm $tmp_bed2
+  echo "Created bed file for Five Prime UTRs."
+else
+    echo "No five_prime_utr features found in input gtf file."
+fi
 
 #--------------------#
 # GET 3'UTR BED FILE #
 #--------------------#
-style="three_prime_utr"
-# print only lines where 3rd field in the defined style
-awk -v s_style=$style 'BEGIN{FS=OFS="\t"} $3==s_style {print}' $my_gtf | awk '{gsub(/\"|\;/,"",$10)}1' | awk '{print $1 "\t" $4 "\t" $5 "\t" $10 "\t" $6 "\t" $7}' > $tmp_bed
-# sort the gene bed file with bedtools sort
-bedtools sort -i $tmp_bed > $tmp_bed2
-rm $tmp_bed
-# subtract 1 from start col (2nd field)
-awk '{print $1 "\t" ($2 - 1) "\t" $3 "\t" $4 "\t" $5 "\t" $6}' $tmp_bed2 > $threeprime_bed
-rm $tmp_bed2
+if $has_three_prime_utr
+then
+  style="three_prime_utr"
+  # print only lines where 3rd field in the defined style
+  awk -v s_style=$style 'BEGIN{FS=OFS="\t"} $3==s_style {print}' $my_gtf | awk '{gsub(/\"|\;/,"",$10)}1' | awk '{print $1 "\t" $4 "\t" $5 "\t" $10 "\t" $6 "\t" $7}' > $tmp_bed
+  # sort the gene bed file with bedtools sort
+  bedtools sort -i $tmp_bed > $tmp_bed2
+  rm $tmp_bed
+  # subtract 1 from start col (2nd field)
+  awk '{print $1 "\t" ($2 - 1) "\t" $3 "\t" $4 "\t" $5 "\t" $6}' $tmp_bed2 > $threeprime_bed
+  rm $tmp_bed2
+  echo "Created bed file for Three Prime UTRs."
+else
+  echo "No three_prime_utr features found in input gtf file."
+fi
 
 rm my_gtf.sorted.gtf
 rm chr_lens_sorted.txt
