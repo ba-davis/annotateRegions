@@ -147,8 +147,14 @@ awk 'BEGIN{FS=OFS="\t"} {print $1"_"$2, $0}' $intron_bed > new_intron.bed
 # add a key (chr_end) as first column to exon.bed file (6 col)
 awk 'BEGIN{FS=OFS="\t"} {print $1"_"$3, $0}' $exon_bed > new_exon.bed
 # match and create final 6-col intron bed file
-awk 'BEGIN{FS=OFS="\t"} NR==FNR {a[$1]=$5;b[$1]=$6;c[$1]=$7;next}{print $0 "\t" a[$1] "\t" b[$1] "\t" c[$1]}' new_exon.bed new_intron.bed | cut -f2- > $intron_bed
+awk 'BEGIN{FS=OFS="\t"} NR==FNR {a[$1]=$5;b[$1]=$6;c[$1]=$7;next}{print $0 "\t" a[$1] "\t" b[$1] "\t" c[$1]}' new_exon.bed new_intron.bed | cut -f2- > intron.bed
+# For some gtf files, there will be a "gene" entry with no exon entries
+# This causes the entire gene to appear in the intron bed file
+# For these special cases, we will remove them from the intron bed file
+# Remove any line with a blank value for the strand field
+awk '$6!=""' intron.bed > $intron_bed
 # remove tmp files
+rm intron.bed
 rm intergenic_sorted.bed
 rm exon.bed
 rm new_intron.bed
