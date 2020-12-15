@@ -15,12 +15,7 @@ library(ggplot2)
 # Export results to an excel file                                                                          (export_excel)
 
 # TODO:
-# add a bedtools sort function to sort the input bed file of target regions to be annotated (save the sorted bed? or just keep info as df in R?)
 # add functionality to work with bed6 input file, and to consider strandedness when finding overlaps
-# create a function to perform the bedtools closest and clean output on each feature type
-#    - split up annotate_overlaps function, it's too big
-# add first exon overlaps
-# add first intron overlaps
 # make certain features optional (not all gtfs have 5'UTR and 3'UTR)
 
 
@@ -245,7 +240,9 @@ annotate_overlaps <- function(infile, bed4=TRUE, gene_bed6, exon_bed6, first_exo
 # usually biomart info
 # first column must be the GeneIDs
 # assumes headers are present
-add_gene_info <- function(df, gene_info_file) {
+# five_prime_utr: defaults to False, set to true if it's present
+# three_prime_utr: defaults to False, set to true if it's present
+add_gene_info <- function(df, gene_info_file, five_prime_utr=FALSE, three_prime_utr=FALSE) {
   # read in the gene info
   gene_dat <- read.delim(gene_info_file, header=T)
   colnames(gene_dat)[1] <- "GeneID"
@@ -286,26 +283,52 @@ add_gene_info <- function(df, gene_info_file) {
   mydat7 <- merge(mydat6, gene_dat, by="TSS.GeneID", all.x=TRUE)
 
   # if there is no 5' or 3'UTR provided, this is the final df
-  # organize columns
-  mydat7 <- mydat7[ ,c(8,7,6,5,4,3,2,9,1,10,11:ncol(mydat7))]
-  # sort by unqID
-  mydat7 <- mydat7[order(mydat7$unqID), ]
-
-  return(mydat7)
+  if (five_prime_utr==FALSE & three_prime_utr==FALSE) {
+    # organize columns
+    mydat7 <- mydat7[ ,c(8,7,6,5,4,3,2,9,1,10,11:ncol(mydat7))]
+    # sort by unqID
+    mydat7 <- mydat7[order(mydat7$unqID), ]
+    return(mydat7)
+  }
   
-  # merge on five prime utr gene ids
-  #colnames(gene_dat) <- gsub("Promoter", "FivePrimeUTR", colnames(gene_dat))
-  #mydat4 <- merge(mydat3, gene_dat, by="FivePrimeUTR.GeneID", all.x=TRUE)
+  # if 5'UTR is true
+  if (five_prime_utr==TRUE & three_prime_utr==FALSE) {
+    # merge on five prime utr gene ids
+    colnames(gene_dat) <- gsub("TSS", "Five_Prime_UTR", colnames(gene_dat))
+    mydat8 <- merge(mydat7, gene_dat, by="Five_Prime_UTR.GeneID", all.x=TRUE)
+    # organize columns
+    mydat8 <- mydat8[ ,c(9,8,7,6,5,4,3,1,11,2,10,12:ncol(mytab8))]
+    # sort by unqID
+    mydat8 <- mydat8[order(mydat8$unqID), ]
+    return(mydat8)
+  }
+  # if 3'UTR is true
+  if (five_prime_utr==FALSE & three_prime_utr==TRUE) {
   # merge on three prime utr gene ids
-  #colnames(gene_dat) <- gsub("FivePrimeUTR", "ThreePrimeUTR", colnames(gene_dat))
-  #mydat5 <- merge(mydat4, gene_dat, by="ThreePrimeUTR.GeneID", all.x=TRUE)
-  # rearrange columns
-  #mydat7 <- mydat6[ ,c(7,8,9,10,4,6,5,3,2,12,11,1,23:27,13:17,18:22,28:32,33:37,38:42)]
+  colnames(gene_dat) <- gsub("TSS", "Three_Prime_UTR", colnames(gene_dat))
+  mydat8 <- merge(mydat7, gene_dat, by="Three_Prime_UTR.GeneID", all.x=TRUE)
+  # organize columns
+  mydat8 <- mydat8[ ,c(9,8,7,6,5,4,3,1,11,2,10,12:ncol(mytab8))]
   # sort by unqID
-  mydat7 <- mydat7[order(mydat7$unqID), ]
-
-  #return(mydat7)
+  mydat8 <- mydat8[order(mydat8$unqID), ]
+  return(mydat8)
+  }
+  # if 5'UTR and 3'UTR are true
+  if (five_prime_utr==TRUE & three_prime_utr==TRUE) {
+    # merge on five prime utr gene ids
+    colnames(gene_dat) <- gsub("TSS", "Five_Prime_UTR", colnames(gene_dat))
+    mydat8 <- merge(mydat7, gene_dat, by="Five_Prime_UTR.GeneID", all.x=TRUE)
+    # merge on three prime utr gene ids
+    colnames(gene_dat) <- gsub("Five", "Three", colnames(gene_dat))
+    mydat9 <- merge(mydat8, gene_dat, by="Three_Prime_UTR.GeneID", all.x=TRUE)
+    # organize columns
+    mydat9 <- mydat9[ ,c(10,9,8,7,6,5,4,2,1,12,3,11,13:ncol(mydat9))]
+    # sort by unqID
+    mydat9 <- mydat9[order(mydat9$unqID), ]
+    return(mydat9)
+  }
 }
+
 
 # function to sort unqID named like "DMR_1"
 sort_ids <- function(res) {
