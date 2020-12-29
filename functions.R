@@ -390,47 +390,91 @@ add_result_info <- function(df, result_file, UCSC=T) {
 #   name: desired comparison/output file name prefix
 #   remove.NA: default TRUE, remove DMRs which are NA in each feature
 #   type: default "full", type of annot.df, further direction
-export_excel <- function(df, name, remove.NA=TRUE, type="full") {
+export_excel <- function(df, name, remove.NA=TRUE, utrs=FALSE, type="full") {
 
-  # Split up into separate dfs based on gene feature type for separate sheets of excel file
-  df.diff <- df[!duplicated(df$unqID), c(1:7)] # diff results (unique target region entries only) 
-  df1 <- df[ ,c(1:16)]            # summary
-  df2 <- df[ ,c(1:8,17)]          # genes
-  df3 <- df[ ,c(1:7,9,18)]        # exons
-  df4 <- df[ ,c(1:7,10,19)]       # first_exons
-  df5 <- df[ ,c(1:7,11,20)]       # introns
-  df6 <- df[ ,c(1:7,12,21)]       # first_introns
-  df7 <- df[ ,c(1:7,13,22)]       # promoters
-  df8 <- df[ ,c(1:7,14:16,23)]    # intergenic
+  if (utrs==FALSE) {
+    # Split up into separate dfs based on gene feature type for separate sheets of excel file
+    df.diff <- df[!duplicated(df$unqID), c(1:7)] # diff results (unique target region entries only) 
+    df1 <- df[ ,c(1:16)]            # summary
+    df2 <- df[ ,c(1:8,17)]          # genes
+    df3 <- df[ ,c(1:7,9,18)]        # exons
+    df4 <- df[ ,c(1:7,10,19)]       # first_exons
+    df5 <- df[ ,c(1:7,11,20)]       # introns
+    df6 <- df[ ,c(1:7,12,21)]       # first_introns
+    df7 <- df[ ,c(1:7,13,22)]       # promoters
+    df8 <- df[ ,c(1:7,14:16,23)]    # intergenic
   
-  #df5 <- df[ ,c(1:7,11,31:35)]    # fiveprimeutr
-  #df6 <- df[ ,c(1:7,12,36:40)]    # threeprimeutr
-  #df7 <- df[ ,c(1:7,13:15,41:45)] # intergenic
+    # remove rows from each feature type df with duplicate unqID and featureID
+    df2 <- df2[!duplicated(df2[c("unqID","Gene.GeneID")]),]
+    df3 <- df3[!duplicated(df3[c("unqID","Exon.GeneID")]),]
+    df4 <- df4[!duplicated(df4[c("unqID","First_Exon.GeneID")]),]
+    df5 <- df5[!duplicated(df5[c("unqID","Intron.GeneID")]),]
+    df6 <- df6[!duplicated(df6[c("unqID","First_Intron.GeneID")]),]
+    df7 <- df7[!duplicated(df7[c("unqID","Promoter.GeneID")]),]
+    df8 <- df8[!duplicated(df8[c("unqID","TSS.GeneID")]),]
 
-  # remove rows from each feature type df with duplicate unqID and featureID
-  df2 <- df2[!duplicated(df2[c("unqID","Gene.GeneID")]),]
-  df3 <- df3[!duplicated(df3[c("unqID","Exon.GeneID")]),]
-  df4 <- df4[!duplicated(df4[c("unqID","First_Exon.GeneID")]),]
-  df5 <- df5[!duplicated(df5[c("unqID","Intron.GeneID")]),]
-  df6 <- df6[!duplicated(df6[c("unqID","First_Intron.GeneID")]),]
-  df7 <- df7[!duplicated(df7[c("unqID","Promoter.GeneID")]),]
-  df8 <- df8[!duplicated(df8[c("unqID","TSS.GeneID")]),]
+    # for each feature df, remove rows with NA value in that feature (if parameter remove.NA is TRUE)
+    if (remove.NA) {
+      df2 <- df2[df2$Gene.GeneID != "NA", ]
+      df3 <- df3[df3$Exon.GeneID != "NA", ]
+      df4 <- df4[df4$First_Exon.GeneID != "NA", ]
+      df5 <- df5[df5$Intron.GeneID != "NA", ]
+      df6 <- df6[df6$First_Intron.GeneID != "NA", ]
+      df7 <- df7[df7$Promoter.GeneID != "NA", ]
+      df8 <- df8[df8$Intergenic != "NA", ]
+    }
 
-  # for each feature df, remove rows with NA value in that feature (if parameter remove.NA is TRUE)
-  if (remove.NA) {
-    df2 <- df2[df2$Gene.GeneID != "NA", ]
-    df3 <- df3[df3$Exon.GeneID != "NA", ]
-    df4 <- df4[df4$First_Exon.GeneID != "NA", ]
-    df5 <- df5[df5$Intron.GeneID != "NA", ]
-    df6 <- df6[df6$First_Intron.GeneID != "NA", ]
-    df7 <- df7[df7$Promoter.GeneID != "NA", ]
-    df8 <- df8[df8$Intergenic != "NA", ]
+    # combine into a list of dfs
+    mydat_list <- list(df.diff, df1, df2, df3, df4, df5, df6, df7, df8)
+    names(mydat_list) <- c("diff results", "annot summary", "gene", "exon", "first exon", "intron", "first intron", "promoter", "intergenic")
+
+    # export excel file
+    write_xlsx(mydat_list, path=paste0(name, ".annot.xlsx"))
+  } else if (utrs==TRUE) {
+    # Split up into separate dfs based on gene feature type for separate sheets of excel file
+    df.diff <- df[!duplicated(df$unqID), c(1:7)] # diff results (unique target region entries only)
+    df1 <- df[ ,c(1:18)]               # summary
+    df2 <- df[ ,c(1:8,19:23)]          # genes
+    df3 <- df[ ,c(1:7,9,24:28)]        # exons
+    df4 <- df[ ,c(1:7,10,29:33)]       # first_exons
+    df5 <- df[ ,c(1:7,11,34:38)]       # introns
+    df6 <- df[ ,c(1:7,12,39:43)]       # first_introns
+    df7 <- df[ ,c(1:7,13,44:48)]       # promoters
+    df8 <- df[ ,c(1:7,16:18,49:53)]    # intergenic
+    df9 <- df[ ,c(1:7,14,54:58)]       # 5' UTRs
+    df10 <- df[ ,c(1:7,15,59:63)]      # 3' UTRs
+
+    # remove rows from each feature type df with duplicate unqID and featureID
+    df2 <- df2[!duplicated(df2[c("unqID","Gene.GeneID")]),]
+    df3 <- df3[!duplicated(df3[c("unqID","Exon.GeneID")]),]
+    df4 <- df4[!duplicated(df4[c("unqID","First_Exon.GeneID")]),]
+    df5 <- df5[!duplicated(df5[c("unqID","Intron.GeneID")]),]
+    df6 <- df6[!duplicated(df6[c("unqID","First_Intron.GeneID")]),]
+    df7 <- df7[!duplicated(df7[c("unqID","Promoter.GeneID")]),]
+    df8 <- df8[!duplicated(df8[c("unqID","TSS.GeneID")]),]
+    df9 <- df9[!duplicated(df9[c("unqID","Five_Prime_UTR.GeneID")]),]
+    df10 <- df10[!duplicated(df10[c("unqID","Three_Prime_UTR.GeneID")]),]
+
+    # for each feature df, remove rows with NA value in that feature (if parameter remove.NA is TRUE)
+    if (remove.NA) {
+      df2 <- df2[df2$Gene.GeneID != "NA", ]
+      df3 <- df3[df3$Exon.GeneID != "NA", ]
+      df4 <- df4[df4$First_Exon.GeneID != "NA", ]
+      df5 <- df5[df5$Intron.GeneID != "NA", ]
+      df6 <- df6[df6$First_Intron.GeneID != "NA", ]
+      df7 <- df7[df7$Promoter.GeneID != "NA", ]
+      df8 <- df8[df8$Intergenic != "NA", ]
+      df9 <- df9[df9$Five_Prime_UTR.GeneID != "NA", ]
+      df10 <- df10[df10$Three_Prime_UTR.GeneID != "NA", ]
+    }
+    
+    # combine into a list of dfs
+    mydat_list <- list(df.diff, df1, df2, df3, df4, df5, df6, df7, df9, df10, df8)
+    names(mydat_list) <- c("diff results", "annot summary", "gene", "exon",
+                           "first exon", "intron", "first intron", "promoter",
+			   "five prime UTR", "three prime UTR", "intergenic")
+
+    # export excel file
+    write_xlsx(mydat_list, path=paste0(name, ".annot.xlsx"))
   }
-
-  # combine into a list of dfs
-  mydat_list <- list(df.diff, df1, df2, df3, df4, df5, df6, df7, df8)
-  names(mydat_list) <- c("diff results", "annot summary", "gene", "exon", "first exon", "intron", "first intron", "promoter", "intergenic")
-
-  # export excel file
-  write_xlsx(mydat_list, path=paste0(name, ".annot.xlsx"))
 }
