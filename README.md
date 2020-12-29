@@ -16,7 +16,11 @@ The script 'extract_beds.sh' creates the following gene feature bed files from t
 
 This script utilizes [BEDtools](https://bedtools.readthedocs.io/en/latest/)
 
-Inputs:
-- gtf file
-- chr_lens.txt file
+Inputs:    
+- gtf file    
+- chr_lens.txt file   
 - size of promoters in bp (upstream from TSS)
+
+TODO   
+generalize the export excel function with/without utrs and varying gene info cols
+add options to consider protein coding genes only
