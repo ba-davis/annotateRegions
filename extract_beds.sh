@@ -129,36 +129,89 @@ rm $name.minus2.bed
 rm $name.first_exons.bed
 echo "Created bed file for first exons."
 
+#---------------------------------#
+# OLD METHOD: GET INTRON BED FILE #
+#---------------------------------#
+## get the complement of every feature in the gtf file (can be considered intergenic regions)
+## use the sorted gtf file and sorted chr_lens.txt file
+#bedtools complement -i my_gtf.sorted.gtf -g chr_lens_sorted.txt > intergenic_sorted.bed
+## get introns
+## considered as the complement of the intergenic and exon regions
+## this works because the other features in the gtf file (CDS, UTR, Start/Stop codon) are all sub-intervals of exon
+## thus, everything that is not intergenic or exon must be intron
+#cut -f1,2,3 $exon_bed > exon.bed # select first 3 columns from exon bed file
+#bedtools complement -i <(cat exon.bed intergenic_sorted.bed | sort -k1,1 -k2,2n) -g chr_lens_sorted.txt > $intron_bed
+## We need to add columns 4,5,6 to intron bed. Get this info from the 6-col exon bed file
+## add a key (chr_start) as first column to intron.bed file (3 col)
+#awk 'BEGIN{FS=OFS="\t"} {print $1"_"$2, $0}' $intron_bed > new_intron.bed
+## add a key (chr_end) as first column to exon.bed file (6 col)
+#awk 'BEGIN{FS=OFS="\t"} {print $1"_"$3, $0}' $exon_bed > new_exon.bed
+## match and create final 6-col intron bed file
+#awk 'BEGIN{FS=OFS="\t"} NR==FNR {a[$1]=$5;b[$1]=$6;c[$1]=$7;next}{print $0 "\t" a[$1] "\t" b[$1] "\t" c[$1]}' new_exon.bed new_intron.bed | cut -f2- > intron.bed
+## For some gtf files, there will be a "gene" entry with no exon entries
+## This causes the entire gene to appear in the intron bed file
+## For these special cases, we will remove them from the intron bed file
+## Remove any line with a blank value for the strand field
+#awk '$6!=""' intron.bed > $intron_bed
+## remove tmp files
+#rm intron.bed
+#rm intergenic_sorted.bed
+#rm exon.bed
+#rm new_intron.bed
+#rm new_exon.bed
+#echo "Created bed file for introns."
+
 #---------------------#
 # GET INTRON BED FILE #
 #---------------------#
-# get the complement of every feature in the gtf file (can be considered intergenic regions)
-# use the sorted gtf file and sorted chr_lens.txt file
-bedtools complement -i my_gtf.sorted.gtf -g chr_lens_sorted.txt > intergenic_sorted.bed
-# get introns
-# considered as the complement of the intergenic and exon regions
-# this works because the other features in the gtf file (CDS, UTR, Start/Stop codon) are all sub-intervals of exon
-# thus, everything that is not intergenic or exon must be intron
-cut -f1,2,3 $exon_bed > exon.bed # select first 3 columns from exon bed file
-bedtools complement -i <(cat exon.bed intergenic_sorted.bed | sort -k1,1 -k2,2n) -g chr_lens_sorted.txt > $intron_bed
-# We need to add columns 4,5,6 to intron bed. Get this info from the 6-col exon bed file
-# add a key (chr_start) as first column to intron.bed file (3 col)
-awk 'BEGIN{FS=OFS="\t"} {print $1"_"$2, $0}' $intron_bed > new_intron.bed
-# add a key (chr_end) as first column to exon.bed file (6 col)
-awk 'BEGIN{FS=OFS="\t"} {print $1"_"$3, $0}' $exon_bed > new_exon.bed
+# split up the genes.bed file into plus and minus strand genes
+awk '$6 == "+" { print $1"\t"$2"\t"$3"\t"$4"\t"$5"\t"$6}' $gene_bed > $name.gene.plus.bed
+awk '$6 == "-" { print $1"\t"$2"\t"$3"\t"$4"\t"$5"\t"$6}' $gene_bed > $name.gene.minus.bed
+# Take the complement of each strand gene bed file, using chr lengths
+bedtools complement -i $name.gene.plus.bed -g chr_lens_sorted.txt > $name.plus.intergenic_sorted.bed
+bedtools complement -i $name.gene.minus.bed -g chr_lens_sorted.txt > $name.minus.intergenic_sorted.bed
+# split the exon bed file into plus and minus strands (only keep 3 columns)
+awk '$6 == "+" { print $1"\t"$2"\t"$3}' $exon_bed > $name.exon.plus.bed
+awk '$6 == "-" { print $1"\t"$2"\t"$3}' $exon_bed > $name.exon.minus.bed
+# Get introns for each strand
+#   considered as the complement of the intergenic and exon regions
+#   this works because the other features in the gtf file (CDS, UTR, Start/Stop codon) are all sub-intervals of exon
+#   thus, everything that is not intergenic or exon must be intron
+bedtools complement -i <(cat $name.exon.plus.bed $name.plus.intergenic_sorted.bed | sort -k1,1 -k2,2n) -g chr_lens_sorted.txt > $name.intron.plus.bed
+bedtools complement -i <(cat $name.exon.minus.bed $name.minus.intergenic_sorted.bed | sort -k1,1 -k2,2n) -g chr_lens_sorted.txt > $name.intron.minus.bed
+# Add columns 4,5,6 from exon file to intron file
+#   add a key (chr_start) as first column to intron.bed file (3 col)
+awk 'BEGIN{FS=OFS="\t"} {print $1"_"$2, $0}' $name.intron.plus.bed > $name.new_intron.plus.bed
+awk 'BEGIN{FS=OFS="\t"} {print $1"_"$2, $0}' $name.intron.minus.bed > $name.new_intron.minus.bed
+#   add a key (chr_end) as first column to exon.bed file (6 col)
+awk 'BEGIN{FS=OFS="\t"} {print $1"_"$3, $0}' $exon_bed > $name.new_exon.bed
 # match and create final 6-col intron bed file
-awk 'BEGIN{FS=OFS="\t"} NR==FNR {a[$1]=$5;b[$1]=$6;c[$1]=$7;next}{print $0 "\t" a[$1] "\t" b[$1] "\t" c[$1]}' new_exon.bed new_intron.bed | cut -f2- > intron.bed
-# For some gtf files, there will be a "gene" entry with no exon entries
-# This causes the entire gene to appear in the intron bed file
-# For these special cases, we will remove them from the intron bed file
-# Remove any line with a blank value for the strand field
-awk '$6!=""' intron.bed > $intron_bed
+awk 'BEGIN{FS=OFS="\t"} NR==FNR {a[$1]=$5;b[$1]=$6;c[$1]=$7;next}{print $0 "\t" a[$1] "\t" b[$1] "\t" c[$1]}' $name.new_exon.bed $name.new_intron.plus.bed | cut -f2- > $name.intron.plus.bed
+awk 'BEGIN{FS=OFS="\t"} NR==FNR {a[$1]=$5;b[$1]=$6;c[$1]=$7;next}{print $0 "\t" a[$1] "\t" b[$1] "\t" c[$1]}' $name.new_exon.bed $name.new_intron.minus.bed | cut -f2- > $name.intron.minus.bed
+# combine the plus and minus intron bed files
+cat $name.intron.plus.bed $name.intron.minus.bed > $name.introns.bed
+# sort it with bedtools
+bedtools sort -i $name.introns.bed > $name.introns_sorted.bed
+# remove entries with no introns
+#   For some gtf files, there will be a "gene" entry with no exon entries
+#   This causes the entire gene to appear in the intron bed file
+#   For these special cases, we will remove them from the intron bed file
+#   Remove any line with a blank value for the strand field
+awk '$6!=""' $name.introns_sorted.bed > $intron_bed
 # remove tmp files
-rm intron.bed
-rm intergenic_sorted.bed
-rm exon.bed
-rm new_intron.bed
-rm new_exon.bed
+rm $name.gene.plus.bed
+rm $name.gene.minus.bed
+rm $name.plus.intergenic_sorted.bed
+rm $name.minus.intergenic_sorted.bed
+rm $name.exon.plus.bed
+rm $name.exon.minus.bed
+rm $name.intron.plus.bed
+rm $name.intron.minus.bed
+rm $name.new_intron.plus.bed
+rm $name.new_intron.minus.bed
+rm $name.new_exon.bed
+rm $name.introns.bed
+rm $name.introns_sorted.bed
 echo "Created bed file for introns."
 
 #---------------------------#
